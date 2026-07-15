@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b32">
+  <meta name="description" content="Astra Complex — un jeu élégant pour maîtriser le calcul avec les nombres complexes.">
+  <title>Astra Complex — Le jeu des nombres complexes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <button class="brand" id="brandButton" type="button" aria-label="Retour à l’accueil">
+      <span class="brand-mark" aria-hidden="true"><i>z</i><b>i</b></span>
+      <span><strong>Astra</strong><small>Complex</small></span>
+    </button>
+    <div class="header-actions">
+      <div class="mini-stat" aria-label="Meilleur score">
+        <span>Record</span>
+        <strong id="headerBest">—</strong>
+      </div>
+      <button class="icon-button" id="themeButton" type="button" aria-label="Activer le thème clair">
+        <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.7 8.7 0 0 1 8.9 3.8 8.8 8.8 0 1 0 20.2 15Z"/></svg>
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="screen home-screen active" id="homeScreen" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Calcul mental · Nombres complexes</p>
+        <h1 id="heroTitle">Faites danser<br><em>les imaginaires.</em></h1>
+        <p class="hero-intro">Un entraînement vif et visuel pour développer vos réflexes, comprendre vos erreurs et apprivoiser <i>i</i>.</p>
+        <div class="hero-actions">
+          <button class="primary-button" type="button" data-start="mix">
+            Commencer le défi
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="text-button" id="discoverButton" type="button">Choisir un entraînement</button>
+        </div>
+        <div class="trust-row" aria-label="Caractéristiques">
+          <span><b>100 %</b> gratuit</span>
+          <span><b>0</b> inscription</span>
+          <span><b>4</b> opérations</span>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-label="Aperçu animé du plan complexe">
+        <div class="plane-card">
+          <div class="plane-grid" aria-hidden="true">
+            <span class="axis axis-x"></span><span class="axis axis-y"></span>
+            <span class="axis-label label-re">Re</span><span class="axis-label label-im">Im</span>
+            <span class="vector"></span><span class="vector-dot"></span>
+            <span class="point-label">z = 3 + 2i</span>
+          </div>
+          <div class="floating-equation equation-a"><span>i²</span><b>= −1</b></div>
+          <div class="floating-equation equation-b"><span>|z|</span><b>√13</b></div>
+          <div class="orbit" aria-hidden="true"><span></span></div>
+        </div>
+      </div>
+
+      <div class="mode-section" id="modeSection">
+        <div class="section-heading">
+          <div><p class="eyebrow"><span></span> Entraînements ciblés</p><h2>Choisissez votre terrain de jeu</h2></div>
+          <p>Chaque série s’adapte progressivement à votre réussite.</p>
+        </div>
+        <div class="mode-grid">
+          <button class="mode-card mode-add" type="button" data-start="add">
+            <span class="mode-symbol">+</span><span class="mode-number">01</span>
+            <span class="mode-text"><strong>Addition</strong><small>Assembler réel et imaginaire</small></span>
+            <span class="mode-arrow">↗</span>
+          </button>
+          <button class="mode-card mode-sub" type="button" data-start="sub">
+            <span class="mode-symbol">−</span><span class="mode-number">02</span>
+            <span class="mode-text"><strong>Soustraction</strong><small>Maîtriser les signes</small></span>
+            <span class="mode-arrow">↗</span>
+          </button>
+          <button class="mode-card mode-mul" type="button" data-start="mul">
+            <span class="mode-symbol">×</span><span class="mode-number">03</span>
+            <span class="mode-text"><strong>Multiplication</strong><small>Faire intervenir i² = −1</small></span>
+            <span class="mode-arrow">↗</span>
+          </button>
+          <button class="mode-card mode-div" type="button" data-start="div">
+            <span class="mode-symbol">÷</span><span class="mode-number">04</span>
+            <span class="mode-text"><strong>Division</strong><small>Utiliser le conjugué</small></span>
+            <span class="mode-arrow">↗</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen game-screen" id="gameScreen" aria-labelledby="gameModeTitle">
+      <div class="game-shell">
+        <div class="game-topline">
+          <button class="back-button" id="quitButton" type="button"><span>←</span> Quitter</button>
+          <div class="game-heading"><span id="gameModeKicker">Défi mixte</span><strong id="gameModeTitle">Question 1 sur 10</strong></div>
+          <div class="game-score"><span>Score</span><strong id="scoreValue">0</strong></div>
+        </div>
+        <div class="progress-track" aria-label="Progression de la partie"><span id="progressBar"></span></div>
+
+        <div class="game-layout">
+          <aside class="game-aside">
+            <div class="aside-card level-card">
+              <span class="aside-label">Niveau adaptatif</span>
+              <div class="level-dots" id="levelDots" aria-label="Niveau 1 sur 3"><i></i><i></i><i></i></div>
+              <p id="levelMessage">Prenez vos marques.</p>
+            </div>
+            <div class="aside-card streak-card">
+              <span class="aside-label">Série en cours</span>
+              <strong><span id="streakValue">0</span><small> bonnes réponses</small></strong>
+              <p>Deux réponses justes augmentent la difficulté.</p>
+            </div>
+            <div class="keyboard-hint"><kbd>1</kbd>–<kbd>4</kbd> pour répondre</div>
+          </aside>
+
+          <section class="question-card" id="questionCard">
+            <div class="question-label"><span id="operationBadge">Mélange</span><small>Calculez puis choisissez la bonne réponse.</small></div>
+            <div class="equation" id="equation" aria-live="polite">—</div>
+            <div class="answers" id="answers" role="group" aria-label="Réponses proposées"></div>
+            <div class="question-actions">
+              <button class="skip-button" id="skipButton" type="button">Je ne sais pas <span>Afficher la méthode</span></button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="feedback-drawer" id="feedbackDrawer" aria-live="polite" aria-hidden="true">
+        <div class="feedback-icon" id="feedbackIcon">✓</div>
+        <div class="feedback-copy">
+          <span id="feedbackKicker">Bonne réponse</span>
+          <strong id="feedbackTitle">Exactement !</strong>
+          <div class="solution" id="solution"></div>
+        </div>
+        <button class="next-button" id="nextButton" type="button">Question suivante <span>→</span></button>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen" aria-labelledby="resultTitle">
+      <div class="result-card">
+        <div class="result-orbit" aria-hidden="true"><span></span><i>z</i></div>
+        <p class="eyebrow centered"><span></span> Série terminée <span></span></p>
+        <h2 id="resultTitle">Belle trajectoire !</h2>
+        <p id="resultMessage">Vous avez consolidé vos réflexes sur les nombres complexes.</p>
+        <div class="result-score"><strong id="resultScore">8</strong><span>/ 10</span></div>
+        <div class="result-stats">
+          <div><span>Précision</span><strong id="resultAccuracy">80 %</strong></div>
+          <div><span>Meilleure série</span><strong id="resultStreak">4</strong></div>
+          <div><span>Niveau atteint</span><strong id="resultLevel">3</strong></div>
+        </div>
+        <div class="result-actions">
+          <button class="primary-button" id="replayButton" type="button">Rejouer cette série <span>↻</span></button>
+          <button class="text-button" id="homeButton" type="button">Changer d’entraînement</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="quitDialog">
+    <div class="dialog-icon">↙</div>
+    <h2>Quitter cette série ?</h2>
+    <p>Votre progression dans cette partie ne sera pas enregistrée.</p>
+    <div><button class="text-button" id="cancelQuit" type="button">Continuer</button><button class="primary-button compact" id="confirmQuit" type="button">Quitter</button></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
