@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101b32">
   <meta name="description" content="Astra Complex — un jeu élégant pour maîtriser le calcul avec les nombres complexes.">
-  <title>Astra Complex 1.1 — Le jeu des nombres complexes</title>
+  <title>Astra Complex 2 — Le jeu des nombres complexes</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   <header class="site-header">
     <button class="brand" id="brandButton" type="button" aria-label="Retour à l’accueil">
       <span class="brand-mark" aria-hidden="true"><i>z</i><b>i</b></span>
-      <span><strong>Astra</strong><small>Complex · 1.1</small></span>
+      <span><strong>Astra</strong><small>Complex · 2.0</small></span>
     </button>
     <div class="header-actions">
       <div class="mini-stat" aria-label="Meilleur score">
@@ -63,6 +63,19 @@
         </div>
       </div>
 
+      <section class="lab-teaser" aria-labelledby="labTeaserTitle">
+        <div class="lab-teaser-visual" aria-hidden="true">
+          <span class="teaser-axis teaser-x"></span><span class="teaser-axis teaser-y"></span>
+          <span class="teaser-vector"></span><i></i>
+        </div>
+        <div class="lab-teaser-copy">
+          <p class="eyebrow"><span></span> Nouveau · Laboratoire V2</p>
+          <h2 id="labTeaserTitle">Voyez les complexes<br><em>prendre vie.</em></h2>
+          <p>Déplacez un point dans le plan et observez instantanément son conjugué, son opposé ou sa rotation par <i>i</i>.</p>
+        </div>
+        <button class="primary-button lab-launch" id="openLabButton" type="button">Ouvrir le laboratoire <span>↗</span></button>
+      </section>
+
       <div class="mode-section" id="modeSection">
         <div class="section-heading">
           <div><p class="eyebrow"><span></span> Entraînements ciblés</p><h2>Choisissez votre terrain de jeu</h2></div>
@@ -89,6 +102,95 @@
             <span class="mode-text"><strong>Division</strong><small>Utiliser le conjugué</small></span>
             <span class="mode-arrow">↗</span>
           </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen lab-screen" id="labScreen" aria-labelledby="labTitle">
+      <div class="lab-topline">
+        <button class="back-button" id="labBackButton" type="button"><span>←</span> Accueil</button>
+        <div class="lab-mode-switch" role="group" aria-label="Mode du laboratoire">
+          <button type="button" class="active" data-lab-mode="free" aria-pressed="true">Explorer</button>
+          <button type="button" data-lab-mode="challenge" aria-pressed="false">Défi placement</button>
+        </div>
+        <div class="lab-best"><span>Record placement</span><strong id="labBestScore">—</strong></div>
+      </div>
+
+      <div class="lab-header">
+        <div>
+          <p class="eyebrow"><span></span> Laboratoire du plan complexe</p>
+          <h1 id="labTitle">Un geste,<br><em>une transformation.</em></h1>
+        </div>
+        <p id="labIntro">Touchez le plan ou faites glisser le point <i>z</i>. Les flèches du clavier permettent aussi de le déplacer.</p>
+      </div>
+
+      <div class="lab-workspace" id="labWorkspace">
+        <aside class="lab-controls">
+          <div class="lab-coordinate-card">
+            <span>Point manipulé</span>
+            <strong id="labAffix">z = 3 + 2i</strong>
+            <small id="labCoordinates">Re(z) = 3 · Im(z) = 2</small>
+          </div>
+
+          <div class="transformation-controls" id="transformationControls">
+            <span class="control-label">Afficher la transformation</span>
+            <div class="transform-grid" role="group" aria-label="Transformation de z">
+              <button type="button" class="active" data-transform="identity" aria-pressed="true"><b>z</b><small>Original</small></button>
+              <button type="button" data-transform="conjugate" aria-pressed="false"><b>z̄</b><small>Conjugué</small></button>
+              <button type="button" data-transform="opposite" aria-pressed="false"><b>−z</b><small>Opposé</small></button>
+              <button type="button" data-transform="times-i" aria-pressed="false"><b>iz</b><small>Rotation +90°</small></button>
+            </div>
+          </div>
+
+          <div class="lab-rule" id="labRule">
+            <span class="rule-icon">✦</span>
+            <div><small>Lecture</small><strong id="labRuleTitle">Point original</strong><p id="labRuleText">z = a + bi</p></div>
+          </div>
+
+          <div class="challenge-panel" id="challengePanel" hidden>
+            <span class="control-label">Défi <b id="challengeRound">1 / 5</b></span>
+            <p>Placez le point d’affixe</p>
+            <strong id="challengeTarget">2 − 3i</strong>
+            <div class="challenge-progress"><span id="challengeProgress"></span></div>
+            <p class="challenge-feedback" id="challengeFeedback" aria-live="polite">Touchez une intersection du quadrillage.</p>
+            <button class="primary-button compact" id="challengeButton" type="button">Valider la position</button>
+          </div>
+        </aside>
+
+        <div class="plane-shell">
+          <div class="plane-toolbar">
+            <span><i class="legend-dot original-dot"></i> z</span>
+            <span id="transformLegend"><i class="legend-dot transformed-dot"></i> Transformation</span>
+            <button type="button" id="labResetButton">Recentrer</button>
+          </div>
+          <svg id="complexPlane" class="complex-plane" viewBox="0 0 600 600" role="img" aria-labelledby="planeTitle planeDescription">
+            <title id="planeTitle">Plan complexe interactif</title>
+            <desc id="planeDescription">Plan gradué de moins cinq à cinq avec un point complexe déplaçable.</desc>
+            <defs>
+              <pattern id="planeGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+                <path d="M 50 0 L 0 0 0 50" class="minor-grid"></path>
+              </pattern>
+              <marker id="arrowOriginal" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" class="arrow-original"></path></marker>
+              <marker id="arrowTransform" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" class="arrow-transform"></path></marker>
+            </defs>
+            <rect x="50" y="50" width="500" height="500" fill="url(#planeGrid)" class="grid-field"></rect>
+            <line x1="45" y1="300" x2="555" y2="300" class="main-axis"></line>
+            <line x1="300" y1="555" x2="300" y2="45" class="main-axis"></line>
+            <path d="M548 295 L558 300 L548 305" class="axis-arrow"></path>
+            <path d="M295 52 L300 42 L305 52" class="axis-arrow"></path>
+            <g id="planeTicks" class="plane-ticks"></g>
+            <text x="560" y="322" class="axis-name">Re</text>
+            <text x="314" y="42" class="axis-name">Im</text>
+            <line id="transformVector" x1="300" y1="300" x2="300" y2="300" class="transform-vector" marker-end="url(#arrowTransform)"></line>
+            <circle id="targetRing" cx="300" cy="300" r="15" class="target-ring" hidden></circle>
+            <circle id="transformPoint" cx="300" cy="300" r="8" class="transform-point"></circle>
+            <text id="transformLabel" x="314" y="284" class="point-label-svg">z</text>
+            <line id="labVector" x1="300" y1="300" x2="450" y2="200" class="lab-vector" marker-end="url(#arrowOriginal)"></line>
+            <circle id="labPointHalo" cx="450" cy="200" r="18" class="point-halo"></circle>
+            <circle id="labPoint" cx="450" cy="200" r="10" class="lab-point"></circle>
+            <text id="labPointLabel" x="464" y="184" class="point-label-svg original-label">z</text>
+          </svg>
+          <div class="plane-caption"><span>−5</span><p>Glissez, touchez ou utilisez les flèches</p><span>+5</span></div>
         </div>
       </div>
     </section>
