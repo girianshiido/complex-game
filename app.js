@@ -15,6 +15,60 @@ const MODES = {
   mix: { label: "Défi mixte", badge: "Mélange", operations: ["+", "−", "×", "÷"] }
 };
 
+const OPERATION_META = {
+  "+": { label: "Addition", className: "add", color: "var(--blue)" },
+  "−": { label: "Soustraction", className: "sub", color: "var(--mint)" },
+  "×": { label: "Multiplication", className: "mul", color: "var(--orange)" },
+  "÷": { label: "Division", className: "div", color: "var(--pink)" }
+};
+
+const ERROR_FEEDBACK = {
+  crossed_parts: {
+    title: "Réel avec réel, imaginaire avec imaginaire",
+    message: "Vous avez croisé les parties réelle et imaginaire. Elles se calculent séparément."
+  },
+  imaginary_sign: {
+    title: "Attention au signe de la partie imaginaire",
+    message: "Le calcul de la partie réelle est juste, mais le signe de la partie imaginaire a changé."
+  },
+  subtraction_distribution: {
+    title: "Le signe moins agit sur les deux termes",
+    message: "Quand on retire un nombre complexe, on soustrait sa partie réelle et sa partie imaginaire."
+  },
+  reversed_subtraction: {
+    title: "L’ordre de la soustraction compte",
+    message: "Vous avez calculé le second nombre moins le premier. Une soustraction n’est pas commutative."
+  },
+  i_squared_sign: {
+    title: "N’oubliez pas que i² = −1",
+    message: "Le produit des parties imaginaires contribue à la partie réelle avec un changement de signe."
+  },
+  term_by_term: {
+    title: "Il faut effectuer les quatre produits",
+    message: "Multiplier seulement réel par réel et imaginaire par imaginaire oublie les deux produits croisés."
+  },
+  cross_product_sign: {
+    title: "Les produits croisés s’additionnent",
+    message: "La partie imaginaire vaut ad + bc. Vérifiez le signe entre les deux produits croisés."
+  },
+  conjugate_sign: {
+    title: "Vérifiez le signe du conjugué",
+    message: "Le conjugué conserve la partie réelle et change uniquement le signe de la partie imaginaire."
+  },
+  swapped_parts: {
+    title: "Les parties ont été interverties",
+    message: "La partie réelle s’écrit avant la partie imaginaire ; leurs rôles ne sont pas interchangeables."
+  },
+  arithmetic: {
+    title: "Presque : reprenez le calcul numérique",
+    message: "La méthode semble comprise, mais une petite erreur de calcul s’est glissée dans le résultat."
+  }
+};
+
+function emptyOperationStats() {
+  return Object.fromEntries(Object.keys(OPERATION_META).map((op) => [op, { seen: 0, correct: 0, skipped: 0, errors: {} }]));
+}
+
 const state = {
   mode: "mix",
   round: 0,
@@ -24,7 +78,8 @@ const state = {
   bestStreak: 0,
   level: 1,
   answered: false,
-  current: null
+  current: null,
+  stats: emptyOperationStats()
 };
 
 const complex = (re, im) => ({ re, im });
@@ -38,14 +93,14 @@ const randomOf = (items) => items[randomInt(0, items.length - 1)];
 
 function formatComplex(z, html = false) {
   const i = html ? "<i>i</i>" : "i";
-  if (z.im === 0) return `${z.re}`;
+  if (z.im === 0) return rawNumber(z.re);
   if (z.re === 0) {
     if (z.im === 1) return i;
     if (z.im === -1) return `−${i}`;
     return `${z.im < 0 ? "−" : ""}${Math.abs(z.im)}${i}`;
   }
   const coefficient = Math.abs(z.im) === 1 ? "" : Math.abs(z.im);
-  return `${z.re} ${z.im < 0 ? "−" : "+"} ${coefficient}${i}`;
+  return `${rawNumber(z.re)} ${z.im < 0 ? "−" : "+"} ${coefficient}${i}`;
 }
 
 function parenthesize(z, html = false) {
@@ -98,39 +153,55 @@ function buildProblem() {
   return { a, b, op, result };
 }
 
+function distractor(value, errorKey) {
+  return { value, errorKey };
+}
+
 function plausibleErrors(problem) {
   const { a, b, op, result } = problem;
   const candidates = [];
   if (op === "+") {
-    candidates.push(complex(a.re + b.im, a.im + b.re), complex(a.re + b.re, a.im - b.im));
+    candidates.push(
+      distractor(complex(a.re + b.im, a.im + b.re), "crossed_parts"),
+      distractor(complex(a.re + b.re, a.im - b.im), "imaginary_sign")
+    );
   } else if (op === "−") {
-    candidates.push(complex(a.re - b.re, a.im + b.im), complex(b.re - a.re, b.im - a.im));
+    candidates.push(
+      distractor(complex(a.re - b.re, a.im + b.im), "subtraction_distribution"),
+      distractor(complex(b.re - a.re, b.im - a.im), "reversed_subtraction")
+    );
   } else if (op === "×") {
-    candidates.push(complex(a.re * b.re + a.im * b.im, a.re * b.im + a.im * b.re));
-    candidates.push(complex(a.re * b.re, a.im * b.im));
+    candidates.push(
+      distractor(complex(a.re * b.re + a.im * b.im, a.re * b.im + a.im * b.re), "i_squared_sign"),
+      distractor(complex(a.re * b.re, a.im * b.im), "term_by_term"),
+      distractor(complex(a.re * b.re - a.im * b.im, a.re * b.im - a.im * b.re), "cross_product_sign")
+    );
   } else {
-    candidates.push(complex(-result.re, result.im), complex(result.re, -result.im));
+    candidates.push(
+      distractor(complex(-result.re, result.im), "conjugate_sign"),
+      distractor(complex(result.re, -result.im), "conjugate_sign")
+    );
   }
   candidates.push(
-    complex(result.re + randomOf([-2, -1, 1, 2]), result.im),
-    complex(result.re, result.im + randomOf([-2, -1, 1, 2])),
-    complex(result.im, result.re)
+    distractor(complex(result.im, result.re), "swapped_parts"),
+    distractor(complex(result.re + randomOf([-2, -1, 1, 2]), result.im), "arithmetic"),
+    distractor(complex(result.re, result.im + randomOf([-2, -1, 1, 2])), "arithmetic")
   );
   return candidates;
 }
 
 function buildOptions(problem) {
   const count = Math.min(4, state.level + 2);
-  const result = [problem.result];
+  const result = [{ value: problem.result, errorKey: null }];
   const used = new Set([keyOf(problem.result)]);
   const candidates = plausibleErrors(problem);
   while (result.length < count) {
-    const candidate = candidates.shift() || complex(
+    const candidate = candidates.shift() || distractor(complex(
       problem.result.re + randomInt(-6, 6),
       problem.result.im + randomInt(-6, 6)
-    );
-    if (!used.has(keyOf(candidate))) {
-      used.add(keyOf(candidate));
+    ), "arithmetic");
+    if (!used.has(keyOf(candidate.value))) {
+      used.add(keyOf(candidate.value));
       result.push(candidate);
     }
   }
@@ -161,29 +232,56 @@ function squareStep(value) {
   return `${signedNumber(value)}²`;
 }
 
-function explain(problem) {
+function solutionSteps(problem) {
   const { a, b, op, result } = problem;
-  const B = formatComplex(b, true);
   const R = formatComplex(result, true);
   if (op === "+") {
     const real = additionStep(a.re, b.re);
     const imaginary = additionStep(a.im, b.im);
-    return `On additionne séparément les parties réelles et imaginaires.<br>(${real}) + (${imaginary})<i>i</i> = ${rawNumber(result.re)} + ${signedNumber(result.im)}<i>i</i> = <b>${R}</b>.`;
+    return [
+      { label: "Regrouper", content: `(${real}) + (${imaginary})<i>i</i>` },
+      { label: "Calculer", content: `${rawNumber(result.re)} + ${signedNumber(result.im)}<i>i</i>` },
+      { label: "Réduire", content: `<b>${R}</b>` }
+    ];
   }
   if (op === "−") {
     const real = subtractionStep(a.re, b.re);
     const imaginary = subtractionStep(a.im, b.im);
-    return `On soustrait séparément les parties réelles et imaginaires.<br>(${real}) + (${imaginary})<i>i</i> = ${rawNumber(result.re)} + ${signedNumber(result.im)}<i>i</i> = <b>${R}</b>.`;
+    return [
+      { label: "Distribuer le signe −", content: `(${real}) + (${imaginary})<i>i</i>` },
+      { label: "Calculer", content: `${rawNumber(result.re)} + ${signedNumber(result.im)}<i>i</i>` },
+      { label: "Réduire", content: `<b>${R}</b>` }
+    ];
   }
   if (op === "×") {
     const ac = productStep(a.re, b.re);
     const bd = productStep(a.im, b.im);
     const ad = productStep(a.re, b.im);
     const bc = productStep(a.im, b.re);
-    return `On utilise (a + b<i>i</i>)(c + d<i>i</i>) = (ac − bd) + (ad + bc)<i>i</i>, car <i>i</i>² = −1.<br>[${ac} − ${bd}] + [${ad} + ${bc}]<i>i</i> = <b>${R}</b>.`;
+    return [
+      { label: "Développer", content: `(${ac}) + (${ad})<i>i</i> + (${bc})<i>i</i> + (${bd})<i>i</i>²` },
+      { label: "Utiliser i² = −1", content: `[${ac} − ${bd}] + [${ad} + ${bc}]<i>i</i>` },
+      { label: "Réduire", content: `<b>${R}</b>` }
+    ];
   }
+  const conjugate = formatComplex(complex(b.re, -b.im), true);
   const denominator = b.re * b.re + b.im * b.im;
-  return `On multiplie le numérateur et le dénominateur par le conjugué de ${B}.<br>Le dénominateur devient ${squareStep(b.re)} + ${squareStep(b.im)} = ${denominator}. Après simplification, on obtient <b>${R}</b>.`;
+  const numeratorReal = additionStep(a.re * b.re, a.im * b.im);
+  const numeratorImaginary = subtractionStep(a.im * b.re, a.re * b.im);
+  return [
+    { label: "Multiplier par le conjugué", content: `Conjugué : ${conjugate}` },
+    { label: "Calculer", content: `<span class="mini-frac"><span>[${numeratorReal}] + [${numeratorImaginary}]<i>i</i></span><span>${squareStep(b.re)} + ${squareStep(b.im)} = ${denominator}</span></span>` },
+    { label: "Simplifier", content: `<b>${R}</b>` }
+  ];
+}
+
+function explain(problem) {
+  return solutionSteps(problem).map((step, index) => `
+    <div class="solution-step">
+      <span class="step-number">${index + 1}</span>
+      <div><small>${step.label}</small><span class="step-math">${step.content}</span></div>
+    </div>
+  `).join("");
 }
 
 function showScreen(name) {
@@ -200,6 +298,7 @@ function startGame(mode) {
   state.bestStreak = 0;
   state.level = 1;
   state.answered = false;
+  state.stats = emptyOperationStats();
   $("#gameModeKicker").textContent = MODES[mode].label;
   $("#operationBadge").textContent = MODES[mode].badge;
   showScreen("game");
@@ -231,8 +330,9 @@ function renderQuestion() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "answer";
-    button.dataset.value = keyOf(option);
-    button.innerHTML = `<span class="answer-key">${index + 1}</span><span>${formatComplex(option, true)}</span>`;
+    button.dataset.value = keyOf(option.value);
+    button.dataset.error = option.errorKey || "";
+    button.innerHTML = `<span class="answer-key">${index + 1}</span><span>${formatComplex(option.value, true)}</span>`;
     button.addEventListener("click", () => answerQuestion(option, button));
     answers.appendChild(button);
   });
@@ -245,10 +345,18 @@ function updateLevelUI() {
   $$("#levelDots i").forEach((dot, index) => dot.classList.toggle("active", index < state.level));
 }
 
+function recordAttempt(isCorrect, errorKey = null, skipped = false) {
+  const operationStats = state.stats[state.current.op];
+  operationStats.seen += 1;
+  if (isCorrect) operationStats.correct += 1;
+  if (skipped) operationStats.skipped += 1;
+  if (errorKey) operationStats.errors[errorKey] = (operationStats.errors[errorKey] || 0) + 1;
+}
+
 function answerQuestion(option, button) {
   if (state.answered) return;
   state.answered = true;
-  const isCorrect = equal(option, state.current.result);
+  const isCorrect = equal(option.value, state.current.result);
   $$(".answer").forEach((answer) => {
     answer.disabled = true;
     if (answer.dataset.value === keyOf(state.current.result)) answer.classList.add("correct");
@@ -265,15 +373,17 @@ function answerQuestion(option, button) {
     state.streak = 0;
     if (state.level > 1 && state.round > 2) state.level -= 1;
   }
+  recordAttempt(isCorrect, option.errorKey);
   $("#scoreValue").textContent = state.score;
   $("#streakValue").textContent = state.streak;
-  showFeedback(isCorrect);
+  showFeedback(isCorrect, false, option.errorKey);
 }
 
 function skipQuestion() {
   if (state.answered) return;
   state.answered = true;
   state.streak = 0;
+  recordAttempt(false, null, true);
   $$(".answer").forEach((answer) => {
     answer.disabled = true;
     if (answer.dataset.value === keyOf(state.current.result)) answer.classList.add("correct");
@@ -281,16 +391,77 @@ function skipQuestion() {
   showFeedback(false, true);
 }
 
-function showFeedback(isCorrect, skipped = false) {
+function showFeedback(isCorrect, skipped = false, errorKey = null) {
   const drawer = $("#feedbackDrawer");
+  const diagnostic = $("#diagnostic");
+  const errorFeedback = errorKey ? ERROR_FEEDBACK[errorKey] : null;
   drawer.classList.toggle("incorrect", !isCorrect);
   $("#feedbackIcon").textContent = isCorrect ? "✓" : skipped ? "?" : "×";
-  $("#feedbackKicker").textContent = isCorrect ? "Bonne réponse" : skipped ? "Méthode" : "À retenir";
-  $("#feedbackTitle").textContent = isCorrect ? randomOf(["Exactement !", "Bien joué !", "Impeccable !"]) : skipped ? `La réponse est ${formatComplex(state.current.result)}` : `La réponse était ${formatComplex(state.current.result)}`;
+  $("#feedbackKicker").textContent = isCorrect ? "Bonne réponse" : skipped ? "Méthode guidée" : "Erreur identifiée";
+  $("#feedbackTitle").textContent = isCorrect
+    ? randomOf(["Exactement !", "Bien joué !", "Impeccable !"])
+    : skipped
+      ? `La réponse est ${formatComplex(state.current.result)}`
+      : errorFeedback?.title || `La réponse était ${formatComplex(state.current.result)}`;
+  diagnostic.hidden = !errorFeedback;
+  diagnostic.textContent = errorFeedback?.message || "";
   $("#solution").innerHTML = explain(state.current);
   $("#nextButton").innerHTML = state.round === state.total ? "Voir mon bilan <span>→</span>" : "Question suivante <span>→</span>";
   drawer.setAttribute("aria-hidden", "false");
   requestAnimationFrame(() => drawer.classList.add("open"));
+}
+
+function saveCumulativeOperationStats() {
+  const saved = JSON.parse(localStorage.getItem("astra-operation-stats") || "{}");
+  Object.entries(state.stats).forEach(([op, stats]) => {
+    const previous = saved[op] || { seen: 0, correct: 0, skipped: 0, errors: {} };
+    previous.seen += stats.seen;
+    previous.correct += stats.correct;
+    previous.skipped += stats.skipped;
+    Object.entries(stats.errors).forEach(([errorKey, count]) => {
+      previous.errors[errorKey] = (previous.errors[errorKey] || 0) + count;
+    });
+    saved[op] = previous;
+  });
+  localStorage.setItem("astra-operation-stats", JSON.stringify(saved));
+}
+
+function renderOperationBreakdown() {
+  const entries = Object.entries(state.stats).filter(([, stats]) => stats.seen > 0);
+  $("#operationBreakdown").innerHTML = entries.map(([op, stats]) => {
+    const meta = OPERATION_META[op];
+    const percent = Math.round((stats.correct / stats.seen) * 100);
+    const skipped = stats.skipped ? ` · ${stats.skipped} passée${stats.skipped > 1 ? "s" : ""}` : "";
+    return `
+      <div class="breakdown-row breakdown-${meta.className}">
+        <span class="breakdown-symbol">${op}</span>
+        <div class="breakdown-operation">
+          <span><strong>${meta.label}</strong><small>${stats.correct} / ${stats.seen}${skipped}</small></span>
+          <span class="breakdown-track"><i style="width:${percent}%"></i></span>
+        </div>
+        <strong class="breakdown-percent">${percent} %</strong>
+      </div>
+    `;
+  }).join("");
+
+  const weakest = entries.reduce((current, entry) => {
+    const accuracy = entry[1].correct / entry[1].seen;
+    if (!current || accuracy < current.accuracy) return { op: entry[0], stats: entry[1], accuracy };
+    return current;
+  }, null);
+  const errors = entries.flatMap(([, stats]) => Object.entries(stats.errors));
+  const commonError = errors.reduce((current, [key, count]) => !current || count > current.count ? { key, count } : current, null);
+  const totalSeen = entries.reduce((total, [, stats]) => total + stats.seen, 0);
+  const totalSkipped = entries.reduce((total, [, stats]) => total + stats.skipped, 0);
+  let message = "Série parfaite : vous pouvez passer au niveau supérieur.";
+  if (totalSeen > 0 && totalSkipped === totalSeen) {
+    message = "Vous avez consulté toutes les méthodes. Rejouez la série et essayez maintenant de répondre avant de demander l’aide.";
+  } else if (commonError?.count > 0) {
+    message = `${ERROR_FEEDBACK[commonError.key].title}. ${ERROR_FEEDBACK[commonError.key].message}`;
+  } else if (weakest && weakest.accuracy < 1) {
+    message = `Reprenez quelques ${OPERATION_META[weakest.op].label.toLowerCase()}s pour consolider cette opération.`;
+  }
+  $("#coachMessage").textContent = message;
 }
 
 function finishGame() {
@@ -300,6 +471,7 @@ function finishGame() {
   localStorage.setItem(`astra-best-${state.mode}`, best);
   localStorage.setItem("astra-last-mode", state.mode);
   localStorage.setItem("astra-global-best", Math.max(Number(localStorage.getItem("astra-global-best") || 0), state.score));
+  saveCumulativeOperationStats();
 
   $("#resultScore").textContent = state.score;
   $("#resultAccuracy").textContent = `${accuracy} %`;
@@ -307,6 +479,7 @@ function finishGame() {
   $("#resultLevel").textContent = state.level;
   $("#resultTitle").textContent = state.score >= 9 ? "Trajectoire parfaite !" : state.score >= 7 ? "Belle trajectoire !" : state.score >= 5 ? "Vous progressez !" : "Encore un tour ?";
   $("#resultMessage").textContent = state.score > oldBest ? "Nouveau record ! Vos réflexes sur les nombres complexes prennent de la vitesse." : "Chaque série renforce les automatismes. Votre meilleur score est conservé sur cet appareil.";
+  renderOperationBreakdown();
   updateBestScore();
   showScreen("result");
 }
