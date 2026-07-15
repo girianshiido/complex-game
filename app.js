@@ -3,6 +3,7 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const screens = {
   home: $("#homeScreen"),
+  lab: $("#labScreen"),
   game: $("#gameScreen"),
   result: $("#resultScreen")
 };
@@ -283,6 +284,275 @@ function explain(problem) {
   `).join("");
 }
 
+const labState = {
+  z: complex(3, 2),
+  transform: "identity",
+  mode: "free",
+  dragging: false,
+  challenge: {
+    round: 0,
+    total: 5,
+    score: 0,
+    target: complex(2, -3),
+    answered: false,
+    finished: false
+  }
+};
+
+const LAB_CENTER = 300;
+const LAB_SCALE = 50;
+const LAB_LIMIT = 5;
+
+function clampLab(value) {
+  return Math.max(-LAB_LIMIT, Math.min(LAB_LIMIT, value));
+}
+
+function labToSvg(z) {
+  return { x: LAB_CENTER + z.re * LAB_SCALE, y: LAB_CENTER - z.im * LAB_SCALE };
+}
+
+function transformComplex(z, transformation) {
+  if (transformation === "conjugate") return complex(z.re, -z.im);
+  if (transformation === "opposite") return complex(-z.re, -z.im);
+  if (transformation === "times-i") return complex(-z.im, z.re);
+  return complex(z.re, z.im);
+}
+
+function labTransformMeta() {
+  const transformed = transformComplex(labState.z, labState.transform);
+  const metadata = {
+    identity: { label: "z", title: "Point original", rule: "z = a + bi" },
+    conjugate: { label: "z̄", title: "Symétrie par rapport à l’axe réel", rule: "z̄ = a − bi" },
+    opposite: { label: "−z", title: "Symétrie par rapport à l’origine", rule: "−z = −a − bi" },
+    "times-i": { label: "iz", title: "Rotation de 90° dans le sens direct", rule: "i(a + bi) = −b + ai" }
+  }[labState.transform];
+  return { ...metadata, transformed };
+}
+
+function setSvgPosition(element, position) {
+  element.setAttribute("cx", position.x);
+  element.setAttribute("cy", position.y);
+}
+
+function setSvgLine(element, position) {
+  element.setAttribute("x2", position.x);
+  element.setAttribute("y2", position.y);
+}
+
+function setSvgLabel(element, position, text) {
+  const xOffset = position.x > 510 ? -42 : 14;
+  const yOffset = position.y < 78 ? 27 : -16;
+  element.setAttribute("x", position.x + xOffset);
+  element.setAttribute("y", position.y + yOffset);
+  element.textContent = text;
+}
+
+function setSvgVisibility(element, visible) {
+  element.toggleAttribute("hidden", !visible);
+}
+
+function renderLab() {
+  const point = labToSvg(labState.z);
+  const meta = labTransformMeta();
+  const transformedPoint = labToSvg(meta.transformed);
+  const showTransformation = labState.mode === "free" && labState.transform !== "identity";
+
+  setSvgLine($("#labVector"), point);
+  setSvgPosition($("#labPoint"), point);
+  setSvgPosition($("#labPointHalo"), point);
+  setSvgLabel($("#labPointLabel"), point, "z");
+
+  setSvgVisibility($("#transformVector"), showTransformation);
+  setSvgVisibility($("#transformPoint"), showTransformation);
+  setSvgVisibility($("#transformLabel"), showTransformation);
+  $("#transformLegend").hidden = !showTransformation;
+  if (showTransformation) {
+    setSvgLine($("#transformVector"), transformedPoint);
+    setSvgPosition($("#transformPoint"), transformedPoint);
+    setSvgLabel($("#transformLabel"), transformedPoint, meta.label);
+  }
+
+  $("#labAffix").textContent = `z = ${formatComplex(labState.z)}`;
+  $("#labCoordinates").textContent = `Re(z) = ${rawNumber(labState.z.re)} · Im(z) = ${rawNumber(labState.z.im)}`;
+  $("#labRuleTitle").textContent = meta.title;
+  $("#labRuleText").textContent = showTransformation
+    ? `${meta.rule}  →  ${meta.label} = ${formatComplex(meta.transformed)}`
+    : meta.rule;
+  $("#planeDescription").textContent = `Le point z a pour affixe ${formatComplex(labState.z)}.`;
+}
+
+function buildPlaneTicks() {
+  const group = $("#planeTicks");
+  group.innerHTML = "";
+  for (let value = -5; value <= 5; value += 1) {
+    if (value === 0) continue;
+    const horizontal = LAB_CENTER + value * LAB_SCALE;
+    const vertical = LAB_CENTER - value * LAB_SCALE;
+    group.insertAdjacentHTML("beforeend", `
+      <line x1="${horizontal}" y1="295" x2="${horizontal}" y2="305"></line>
+      <text x="${horizontal}" y="322" text-anchor="middle">${rawNumber(value)}</text>
+      <line x1="295" y1="${vertical}" x2="305" y2="${vertical}"></line>
+      <text x="287" y="${vertical + 4}" text-anchor="end">${rawNumber(value)}</text>
+    `);
+  }
+}
+
+function updateLabPointFromPointer(event) {
+  if (labState.mode === "challenge" && labState.challenge.answered) return;
+  const rect = $("#complexPlane").getBoundingClientRect();
+  const svgX = ((event.clientX - rect.left) / rect.width) * 600;
+  const svgY = ((event.clientY - rect.top) / rect.height) * 600;
+  labState.z = complex(
+    clampLab(Math.round((svgX - LAB_CENTER) / LAB_SCALE)),
+    clampLab(Math.round((LAB_CENTER - svgY) / LAB_SCALE))
+  );
+  setSvgVisibility($("#targetRing"), false);
+  renderLab();
+}
+
+function setLabTransformation(transformation) {
+  labState.transform = transformation;
+  $$('[data-transform]').forEach((button) => {
+    const active = button.dataset.transform === transformation;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  renderLab();
+}
+
+function updateLabBest() {
+  const best = Number(localStorage.getItem("astra-lab-best") || 0);
+  $("#labBestScore").textContent = best ? `${best} / 5` : "—";
+}
+
+function randomLabTarget() {
+  let target;
+  do {
+    target = complex(randomInt(-4, 4), randomInt(-4, 4));
+  } while (target.re === 0 && target.im === 0);
+  return target;
+}
+
+function nextLabChallenge() {
+  const challenge = labState.challenge;
+  if (challenge.round >= challenge.total) {
+    finishLabChallenge();
+    return;
+  }
+  challenge.round += 1;
+  challenge.target = randomLabTarget();
+  challenge.answered = false;
+  challenge.finished = false;
+  labState.z = complex(0, 0);
+  $("#challengeRound").textContent = `${challenge.round} / ${challenge.total}`;
+  $("#challengeTarget").textContent = formatComplex(challenge.target);
+  $("#challengeProgress").style.width = `${((challenge.round - 1) / challenge.total) * 100}%`;
+  $("#challengeFeedback").textContent = "Touchez une intersection du quadrillage.";
+  $("#challengeFeedback").className = "challenge-feedback";
+  $("#challengeButton").textContent = "Valider la position";
+  setSvgVisibility($("#targetRing"), false);
+  renderLab();
+}
+
+function startLabChallenge() {
+  labState.challenge = { ...labState.challenge, round: 0, score: 0, answered: false, finished: false };
+  nextLabChallenge();
+}
+
+function validateLabChallenge() {
+  const challenge = labState.challenge;
+  if (challenge.finished) {
+    startLabChallenge();
+    return;
+  }
+  if (challenge.answered) {
+    nextLabChallenge();
+    return;
+  }
+  challenge.answered = true;
+  const correct = equal(labState.z, challenge.target);
+  const feedback = $("#challengeFeedback");
+  if (correct) {
+    challenge.score += 1;
+    feedback.textContent = "Exact : le point est parfaitement placé.";
+    feedback.className = "challenge-feedback success";
+  } else {
+    feedback.textContent = `Le point attendu est ${formatComplex(challenge.target)}.`;
+    feedback.className = "challenge-feedback error";
+    const target = labToSvg(challenge.target);
+    setSvgPosition($("#targetRing"), target);
+    setSvgVisibility($("#targetRing"), true);
+  }
+  $("#challengeProgress").style.width = `${(challenge.round / challenge.total) * 100}%`;
+  $("#challengeButton").textContent = challenge.round === challenge.total ? "Voir le résultat" : "Point suivant";
+}
+
+function finishLabChallenge() {
+  const challenge = labState.challenge;
+  challenge.finished = true;
+  const best = Math.max(Number(localStorage.getItem("astra-lab-best") || 0), challenge.score);
+  localStorage.setItem("astra-lab-best", best);
+  updateLabBest();
+  $("#challengeRound").textContent = "Terminé";
+  $("#challengeTarget").textContent = `${challenge.score} / ${challenge.total}`;
+  $("#challengeFeedback").textContent = challenge.score === challenge.total
+    ? "Trajectoire parfaite !"
+    : challenge.score >= 3
+      ? "Bien joué. Encore une série pour stabiliser vos repères."
+      : "Reprenez le défi : observez bien le signe de chaque coordonnée.";
+  $("#challengeFeedback").className = `challenge-feedback ${challenge.score >= 3 ? "success" : "error"}`;
+  $("#challengeButton").textContent = "Recommencer";
+  setSvgVisibility($("#targetRing"), false);
+}
+
+function setLabMode(mode) {
+  labState.mode = mode;
+  $$('[data-lab-mode]').forEach((button) => {
+    const active = button.dataset.labMode === mode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  const challengeMode = mode === "challenge";
+  $("#challengePanel").hidden = !challengeMode;
+  $("#transformationControls").hidden = challengeMode;
+  $("#labRule").hidden = challengeMode;
+  $("#labWorkspace").classList.toggle("challenge-mode", challengeMode);
+  $("#labIntro").textContent = challengeMode
+    ? "Lisez l’affixe demandé, puis touchez l’intersection correspondante dans le plan."
+    : "Touchez le plan ou faites glisser le point z. Les flèches du clavier permettent aussi de le déplacer.";
+  labState.transform = "identity";
+  setLabTransformation("identity");
+  if (challengeMode) startLabChallenge();
+  else {
+    labState.z = complex(3, 2);
+    setSvgVisibility($("#targetRing"), false);
+    renderLab();
+  }
+}
+
+function openLab() {
+  updateLabBest();
+  setLabMode("free");
+  showScreen("lab");
+}
+
+function resetLabPoint() {
+  if (labState.mode === "challenge" && labState.challenge.answered) return;
+  labState.z = labState.mode === "challenge" ? complex(0, 0) : complex(3, 2);
+  setSvgVisibility($("#targetRing"), false);
+  renderLab();
+}
+
+function moveLabPoint(deltaRe, deltaIm) {
+  if (labState.mode === "challenge" && labState.challenge.answered) return;
+  labState.z = complex(
+    clampLab(labState.z.re + deltaRe),
+    clampLab(labState.z.im + deltaIm)
+  );
+  setSvgVisibility($("#targetRing"), false);
+  renderLab();
+}
+
 function showScreen(name) {
   Object.entries(screens).forEach(([key, element]) => element.classList.toggle("active", key === name));
   $("#feedbackDrawer").classList.remove("open");
@@ -501,6 +771,12 @@ function setTheme(theme) {
 
 $$('[data-start]').forEach((button) => button.addEventListener("click", () => startGame(button.dataset.start)));
 $("#discoverButton").addEventListener("click", () => $("#modeSection").scrollIntoView({ behavior: "smooth" }));
+$("#openLabButton").addEventListener("click", openLab);
+$("#labBackButton").addEventListener("click", goHome);
+$("#labResetButton").addEventListener("click", resetLabPoint);
+$$('[data-transform]').forEach((button) => button.addEventListener("click", () => setLabTransformation(button.dataset.transform)));
+$$('[data-lab-mode]').forEach((button) => button.addEventListener("click", () => setLabMode(button.dataset.labMode)));
+$("#challengeButton").addEventListener("click", validateLabChallenge);
 $("#brandButton").addEventListener("click", goHome);
 $("#homeButton").addEventListener("click", goHome);
 $("#replayButton").addEventListener("click", () => startGame(state.mode));
@@ -515,7 +791,29 @@ $("#cancelQuit").addEventListener("click", () => $("#quitDialog").close());
 $("#confirmQuit").addEventListener("click", () => { $("#quitDialog").close(); goHome(); });
 $("#themeButton").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
+$("#complexPlane").addEventListener("pointerdown", (event) => {
+  labState.dragging = true;
+  $("#complexPlane").setPointerCapture(event.pointerId);
+  updateLabPointFromPointer(event);
+});
+$("#complexPlane").addEventListener("pointermove", (event) => {
+  if (labState.dragging) updateLabPointFromPointer(event);
+});
+$("#complexPlane").addEventListener("pointerup", () => { labState.dragging = false; });
+$("#complexPlane").addEventListener("pointercancel", () => { labState.dragging = false; });
+
 document.addEventListener("keydown", (event) => {
+  if (screens.lab.classList.contains("active") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+    event.preventDefault();
+    const moves = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1]
+    };
+    moveLabPoint(...moves[event.key]);
+    return;
+  }
   if (!screens.game.classList.contains("active")) return;
   if (event.key >= "1" && event.key <= "4" && !state.answered) {
     const answer = $$(".answer")[Number(event.key) - 1];
@@ -530,3 +828,6 @@ document.addEventListener("keydown", (event) => {
 const preferredTheme = localStorage.getItem("astra-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
 setTheme(preferredTheme);
 updateBestScore();
+buildPlaneTicks();
+updateLabBest();
+renderLab();
