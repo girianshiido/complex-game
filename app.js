@@ -265,12 +265,11 @@ function solutionSteps(problem) {
     ];
   }
   const conjugate = formatComplex(complex(b.re, -b.im), true);
-  const denominator = b.re * b.re + b.im * b.im;
   const numeratorReal = additionStep(a.re * b.re, a.im * b.im);
   const numeratorImaginary = subtractionStep(a.im * b.re, a.re * b.im);
   return [
     { label: "Multiplier par le conjugué", content: `Conjugué : ${conjugate}` },
-    { label: "Calculer", content: `<span class="mini-frac"><span>[${numeratorReal}] + [${numeratorImaginary}]<i>i</i></span><span>${squareStep(b.re)} + ${squareStep(b.im)} = ${denominator}</span></span>` },
+    { label: "Calculer", content: `<span class="mini-frac"><span>[${numeratorReal}] + [${numeratorImaginary}]<i>i</i></span><span>${squareStep(b.re)} + ${squareStep(b.im)}</span></span>` },
     { label: "Simplifier", content: `<b>${R}</b>` }
   ];
 }
