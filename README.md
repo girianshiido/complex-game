@@ -6,11 +6,18 @@ Un jeu pédagogique autonome pour s’entraîner au calcul avec les nombres comp
 
 - quatre entraînements ciblés et un défi mixte ;
 - difficulté adaptative sur trois niveaux ;
-- explication détaillée après chaque réponse ;
+- correction guidée en trois étapes après chaque réponse ;
+- réponses incorrectes construites à partir des erreurs classiques ;
+- diagnostic personnalisé lorsqu’une erreur est reconnue ;
+- statistiques de réussite par opération et conseil de fin de série ;
 - bilan de fin de série et record enregistré localement ;
 - thèmes clair et sombre ;
 - navigation au clavier et mise en page adaptée aux mobiles ;
 - aucune inscription, aucun serveur et aucune donnée transmise.
+
+## Version 1.1
+
+La version 1.1 enrichit la dimension pédagogique du jeu : les distracteurs ne sont plus de simples valeurs proches, mais représentent des erreurs de méthode identifiables. Les corrections et le bilan s’adaptent alors à la réponse choisie.
 
 ## Lancer le jeu
 
