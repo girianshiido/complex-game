@@ -110,19 +110,19 @@ html[data-theme="light"] .primary-button { color: #fff; }
 .trust-row span:not(:last-child)::after { content: "·"; color: var(--line-strong); margin-left: 20px; }
 .trust-row b { color: var(--text); }
 
-.hero-visual { min-height: 510px; display: grid; place-items: center; }
+.hero-visual { min-height: 510px; display: grid; place-items: center; overflow: hidden; }
 .plane-card { width: min(100%, 485px); aspect-ratio: 1; border: 1px solid var(--line); border-radius: 50%; position: relative; background: radial-gradient(circle, rgba(112,169,255,.06), transparent 64%); }
 .plane-card::before, .plane-card::after { content: ""; position: absolute; border: 1px solid var(--line); border-radius: 50%; inset: 10%; }
 .plane-card::after { inset: 27%; }
-.plane-grid { position: absolute; inset: 14%; border: 1px solid var(--line); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 25% 25%; }
+.plane-grid { --z-x: 87.5%; --z-y: 25%; position: absolute; inset: 14%; border: 1px solid var(--line); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 12.5% 12.5%; }
 .axis { position: absolute; background: var(--line-strong); }
 .axis-x { width: 112%; height: 1px; top: 50%; left: -6%; }
 .axis-y { height: 112%; width: 1px; left: 50%; top: -6%; }
 .axis-label { position: absolute; color: var(--muted); font: italic 12px "Source Serif 4", serif; }
 .label-re { right: -8%; top: 52%; } .label-im { top: -9%; left: 53%; }
-.vector { position: absolute; height: 2px; width: 45%; background: linear-gradient(90deg, var(--blue), var(--orange)); left: 50%; top: 50%; transform-origin: left; transform: rotate(-34deg); box-shadow: 0 0 16px var(--blue); }
-.vector::after { content: ""; position: absolute; right: -1px; top: -4px; border-left: 8px solid var(--orange); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
-.vector-dot { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 6px rgba(255,159,97,.12); left: 87%; top: 25%; animation: pulse 2s ease infinite; }
+.vector { position: absolute; height: 2px; width: 45.0694%; background: linear-gradient(90deg, var(--blue), var(--orange)); left: 50%; top: calc(50% - 1px); transform-origin: 0 50%; transform: rotate(-33.6901deg); box-shadow: 0 0 16px var(--blue); }
+.vector::after { content: ""; position: absolute; right: 0; top: -3px; border-left: 8px solid var(--orange); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.vector-dot { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 6px rgba(255,159,97,.12); left: calc(var(--z-x) - 5.5px); top: calc(var(--z-y) - 5.5px); animation: pulse 2s ease infinite; }
 .point-label { position: absolute; left: 68%; top: 15%; color: var(--text); font: italic 15px "Source Serif 4", serif; white-space: nowrap; }
 .floating-equation { position: absolute; z-index: 2; background: var(--surface); border: 1px solid var(--line-strong); backdrop-filter: blur(14px); border-radius: 15px; padding: 13px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
 .floating-equation span { color: var(--muted); font: italic 13px "Source Serif 4", serif; }
